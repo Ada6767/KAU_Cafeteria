@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker Login - Restaurant Ticketing System</title>
+    <link rel="stylesheet" href="../CSS/style.css">
+    <link rel="stylesheet" href="../css/worker.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Worker Login</h1>
+            <div class="logo">
+                <a href="../index.html">
+                    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="25" cy="25" r="25" fill="#4ECDC4"/>
+                        <path d="M15 20H35M15 25H35M15 30H35" stroke="white" stroke-width="2"/>
+                    </svg>
+                </a>
+            </div>
+        </header>
+        <main>
+            <div class="form-container">
+                <div id="alert-container"></div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <div class="form-group hint">
+                        <p>Default login: worker@restaurant.com / worker123</p>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Login</button>
+                        <a href="../index.html" class="link">Back to Home</a>
+                    </div>
+                </form>
+            </div>
+        </main>
+        <footer>
+            <p>&copy; 2025 Restaurant Ticketing System</p>
+        </footer>
+    </div>
+
+    <script src="../JS/database.js"></script>
+    <script src="../JS/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('login-form');
+            const alertContainer = document.getElementById('alert-container');
+            
+            // Redirect if already logged in
+            const currentWorker = Auth.worker.getCurrentWorker();
+            if (currentWorker) {
+                window.location.href = 'scanner.html';
+            }
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get form values
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+                
+                // Clear previous alerts
+                alertContainer.innerHTML = '';
+                
+                // Login worker
+                const result = Auth.worker.login(email, password);
+                
+                if (result.success) {
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'scanner.html';
+                    }, 1000);
+                } else {
+                    showAlert(result.message, 'danger');
+                }
+            });
+            
+            function showAlert(message, type) {
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type}`;
+                alert.textContent = message;
+                alertContainer.appendChild(alert);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard – KAU Cafeteria</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../CSS/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="container">
+        <header>
+            <div class="logo-area">
+                <div class="logo-icon">🍽️</div>
+                <div>
+                    <h1>KAU Cafeteria</h1>
+                    <span class="tagline">My Dashboard</span>
+                </div>
+            </div>
+            <div class="user-actions">
+                <span id="user-name"></span>
+                <button id="logout-btn" class="btn secondary">Logout</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="alert-container"></div>
+
+            <!-- Account Info -->
+            <div class="dashboard-section">
+                <h2>👤 Account Information</h2>
+                <p id="user-email" style="color:var(--muted);margin-bottom:0.3rem"></p>
+                <p id="user-status" style="color:var(--teal);font-weight:600;margin-bottom:1rem"></p>
+                <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+                    <div class="balance-badge">
+                        💰 Balance: <span class="amount" id="user-balance">0.00</span> SAR
+                    </div>
+                    <button id="add-balance-btn" class="btn">Add Balance</button>
+                </div>
+            </div>
+
+            <!-- Today's Menu -->
+            <div class="dashboard-section">
+                <h2>📋 Today's Menu</h2>
+                <p class="section-sub" id="dashboard-date"></p>
+                <div id="dashboard-menu" class="menu-grid">
+                    <div class="menu-loading">
+                        <div class="spinner"></div>
+                        <p>Loading menu...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchase Tickets -->
+            <div class="dashboard-section">
+                <h2>🎟️ Purchase Tickets</h2>
+                <div class="meal-options">
+                    <div class="meal-card">
+                        <h3>🌅 Breakfast</h3>
+                        <p class="original-price">13.50 SAR</p>
+                        <p class="your-price" id="breakfast-price">13.50 SAR</p>
+                        <button class="btn buy-btn" data-meal="breakfast" data-price="13.50">Buy Ticket</button>
+                    </div>
+                    <div class="meal-card">
+                        <h3>☀️ Lunch</h3>
+                        <p class="original-price">23.00 SAR</p>
+                        <p class="your-price" id="lunch-price">23.00 SAR</p>
+                        <button class="btn buy-btn" data-meal="lunch" data-price="23.00">Buy Ticket</button>
+                    </div>
+                    <div class="meal-card">
+                        <h3>🌙 Dinner</h3>
+                        <p class="original-price">23.00 SAR</p>
+                        <p class="your-price" id="dinner-price">23.00 SAR</p>
+                        <button class="btn buy-btn" data-meal="dinner" data-price="23.00">Buy Ticket</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Tickets -->
+            <div class="dashboard-section">
+                <h2>🎫 My Tickets</h2>
+                <div id="tickets-container" class="tickets-grid"></div>
+            </div>
+
+            <!-- Add Balance Modal -->
+            <div id="balance-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Add Balance</h2>
+                    <form id="add-balance-form">
+                        <div class="form-group">
+                            <label for="amount">Amount (SAR)</label>
+                            <input type="number" id="amount" min="10" step="10" value="100">
+                        </div>
+                        <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem">
+                            🧪 <strong>Prototype mode:</strong> This simulates adding balance. Real payments via Moyasar can be integrated when going live.
+                        </p>
+                        <button type="submit" class="btn">Add Balance</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- QR Code Modal -->
+            <div id="qr-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Your Ticket</h2>
+                    <div id="qr-container" class="qr-display"></div>
+                    <div class="ticket-info">
+                        <p>Meal: <strong><span id="ticket-meal-type"></span></strong></p>
+                        <p>Purchased: <span id="ticket-date"></span></p>
+                    </div>
+                    <p class="instructions">Show this QR code to the cafeteria worker to redeem your meal.</p>
+                </div>
+            </div>
+        </main>
+
+        <footer><p>© 2025 KAU Cafeteria</p></footer>
+    </div>
+
+    <script src="../JS/database.js"></script>
+    <script src="../JS/auth.js"></script>
+
+    <!-- JSONBin for menu -->
+    <script type="module">
+        import { MenuAPI } from '../JS/menu-api.js';
+
+        const today   = new Date();
+        const dateKey = today.toISOString().split('T')[0];
+        document.getElementById('dashboard-date').textContent =
+            today.toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+        async function loadDashboardMenu() {
+            const container = document.getElementById('dashboard-menu');
+            try {
+                const data = await MenuAPI.getForDate(dateKey);
+                if (data) {
+                    const meals = [
+                        { key:'breakfast', label:'Breakfast', icon:'🌅' },
+                        { key:'lunch',     label:'Lunch',     icon:'☀️' },
+                        { key:'dinner',    label:'Dinner',    icon:'🌙' }
+                    ];
+                    container.innerHTML = meals.map(m => {
+                        const items = data[m.key] || [];
+                        return `
+                            <div class="menu-card">
+                                <div class="menu-card-header">
+                                    <span class="meal-icon">${m.icon}</span>
+                                    <h3>${m.label}</h3>
+                                </div>
+                                <ul class="menu-items">
+                                    ${items.length ? items.map(i => `<li>${i}</li>`).join('') : '<li class="no-items">Not posted yet</li>'}
+                                </ul>
+                            </div>`;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<div class="menu-empty"><p>📋 Today\'s menu hasn\'t been posted yet.</p></div>';
+                }
+            } catch {
+                container.innerHTML = '<div class="menu-empty"><p>⚠️ Could not load menu.</p></div>';
+            }
+        }
+
+        loadDashboardMenu();
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentUser = Auth.customer.getCurrentUser();
+            if (!currentUser) { window.location.href = 'login.html'; return; }
+
+            const userNameEl    = document.getElementById('user-name');
+            const userEmailEl   = document.getElementById('user-email');
+            const userStatusEl  = document.getElementById('user-status');
+            const userBalanceEl = document.getElementById('user-balance');
+            const alertC        = document.getElementById('alert-container');
+            const ticketsCont   = document.getElementById('tickets-container');
+            const balanceModal  = document.getElementById('balance-modal');
+            const qrModal       = document.getElementById('qr-modal');
+            const buyButtons    = document.querySelectorAll('.buy-btn');
+
+            userNameEl.textContent   = currentUser.name;
+            userEmailEl.textContent  = currentUser.email;
+            userStatusEl.textContent = currentUser.isStudent ? '🎓 KAU Student — 50% Discount Applied!' : '👤 Regular Customer';
+            userBalanceEl.textContent = (currentUser.balance || 0).toFixed(2);
+
+            // Apply student discount to display
+            if (currentUser.isStudent) {
+                document.getElementById('breakfast-price').textContent = (13.50/2).toFixed(2) + ' SAR';
+                document.getElementById('lunch-price').textContent     = (23.00/2).toFixed(2) + ' SAR';
+                document.getElementById('dinner-price').textContent    = (23.00/2).toFixed(2) + ' SAR';
+                buyButtons.forEach(btn => {
+                    const orig = parseFloat(btn.getAttribute('data-price'));
+                    btn.setAttribute('data-price', (orig/2).toFixed(2));
+                });
+            }
+
+            loadUserTickets();
+
+            // Logout
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                Auth.customer.logout();
+                window.location.href = 'login.html';
+            });
+
+            // Open balance modal
+            document.getElementById('add-balance-btn').addEventListener('click', () => {
+                balanceModal.style.display = 'block';
+            });
+
+            // Close modals
+            document.querySelectorAll('.close').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    balanceModal.style.display = 'none';
+                    qrModal.style.display = 'none';
+                });
+            });
+            window.addEventListener('click', e => {
+                if (e.target === balanceModal) balanceModal.style.display = 'none';
+                if (e.target === qrModal)      qrModal.style.display = 'none';
+            });
+
+            // Add balance
+            document.getElementById('add-balance-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('amount').value);
+                if (isNaN(amount) || amount <= 0) { showAlert('Enter a valid amount', 'danger'); return; }
+
+                const updated = DB.users.update(currentUser.id, { balance: (currentUser.balance||0) + amount });
+                if (updated) {
+                    sessionStorage.setItem('currentUser', JSON.stringify({...updated, password:undefined}));
+                    currentUser.balance = updated.balance;
+                    userBalanceEl.textContent = updated.balance.toFixed(2);
+                    showAlert(`${amount.toFixed(2)} SAR added to your balance!`, 'success');
+                    balanceModal.style.display = 'none';
+                }
+            });
+
+            // Buy ticket
+            buyButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const mealType = this.getAttribute('data-meal');
+                    const price    = parseFloat(this.getAttribute('data-price'));
+
+                    if ((currentUser.balance||0) < price) {
+                        showAlert('Insufficient balance. Please add funds.', 'danger');
+                        return;
+                    }
+
+                    DB.tickets.create({ userId: currentUser.id, mealType, price });
+                    const updated = DB.users.update(currentUser.id, { balance: (currentUser.balance||0) - price });
+
+                    if (updated) {
+                        sessionStorage.setItem('currentUser', JSON.stringify({...updated, password:undefined}));
+                        currentUser.balance = updated.balance;
+                        userBalanceEl.textContent = updated.balance.toFixed(2);
+                        showAlert(`${mealType.charAt(0).toUpperCase()+mealType.slice(1)} ticket purchased!`, 'success');
+                        loadUserTickets();
+                    }
+                });
+            });
+
+            function loadUserTickets() {
+                const tickets = DB.tickets.getUserTickets(currentUser.id);
+                ticketsCont.innerHTML = '';
+
+                const unused = tickets.filter(t => !t.used);
+                if (unused.length === 0) {
+                    ticketsCont.innerHTML = '<p class="no-tickets">No tickets yet. Buy one above! 👆</p>';
+                    return;
+                }
+
+                unused.forEach(ticket => {
+                    const el   = document.createElement('div');
+                    el.className = 'ticket-card';
+                    const meal    = ticket.mealType.charAt(0).toUpperCase() + ticket.mealType.slice(1);
+                    const date    = new Date(ticket.createdAt).toLocaleDateString();
+                    const shortId = ticket.id.substring(0, 24) + '…';
+                    el.innerHTML = `
+                        <div class="ticket-header">
+                            <h3>${meal}</h3>
+                            <span class="ticket-price">${ticket.price.toFixed(2)} SAR</span>
+                        </div>
+                        <div class="ticket-body">
+                            <p>Purchased: ${date}</p>
+                            <p style="font-family:monospace;font-size:0.78rem;color:var(--muted);margin-bottom:0.9rem;word-break:break-all" title="Full ID: ${ticket.id}">
+                                🔑 ID: ${shortId}
+                            </p>
+                            <button class="btn view-qr-btn" data-ticket-id="${ticket.id}"
+                                data-meal-type="${meal}" data-date="${date}">
+                                View QR Code
+                            </button>
+                        </div>`;
+                    ticketsCont.appendChild(el);
+                });
+
+                document.querySelectorAll('.view-qr-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const ticketId = this.getAttribute('data-ticket-id');
+                        const mealType = this.getAttribute('data-meal-type');
+                        const date     = this.getAttribute('data-date');
+
+                        document.getElementById('ticket-meal-type').textContent = mealType;
+                        document.getElementById('ticket-date').textContent      = date;
+
+                        const qrContainer = document.getElementById('qr-container');
+                        qrContainer.innerHTML = '';
+                        const qr = qrcode(0, 'L');
+                        qr.addData(ticketId);
+                        qr.make();
+                        qrContainer.innerHTML = qr.createImgTag(10);
+                        qrModal.style.display = 'block';
+                    });
+                });
+            }
+
+            function showAlert(msg, type) {
+                const el = document.createElement('div');
+                el.className = `alert alert-${type}`;
+                el.textContent = msg;
+                alertC.innerHTML = '';
+                alertC.appendChild(el);
+                setTimeout(() => el.remove(), 5000);
+            }
+        });
+    </script>
+</body>
+</html>
